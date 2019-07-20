@@ -1,0 +1,12 @@
+version: "3"
+services:
+  web:
+    image: gihyodocker/web
+    ports:
+      - "3000:3000"
+    environment:
+      REDIS_TARGET: redis
+    depends_on:
+      - redis
+  redis:
+    image: "redis:alpine"
