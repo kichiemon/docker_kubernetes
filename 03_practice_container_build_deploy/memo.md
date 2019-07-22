@@ -120,13 +120,20 @@ $ docker container run -d --rm --name mysql \
 オーケストレーションを試すには、
 Dockerには、Docker in Dockerという仕組みがあるのでそれを利用すると楽。dind
 
+### Service
+
 Serviceにレプリカ数の制御を指示すると、自動でコンテナを複製し、複数のノードにまたがって適切に配置してくれる
 
 Stackが扱うアプリケーションの粒度はComposeと同様
 StackによってデプロイされるService群は、overlayネットワークに所属
 
-* Kubernetes
 
+### Stack
 
+* deploy
+* ls
+* ps
+* rm
+* services
 
 
