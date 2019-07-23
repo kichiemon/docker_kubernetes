@@ -42,3 +42,18 @@ docker container exec -it manager \
 docker container exec -it manager \
   docker service rm echo
 ```
+
+Stack操作
+```
+docker container exec -it manager docker network create --driver=overlay --attachable ch03
+
+docker container exec -it manager docker stack deploy -c /stack/ch03-webapi.yml echo
+
+docker container exec -it manager docker stack services echo
+
+docker container exec -it manager docker stack deploy -c /stack/visualizer.yml visualizer
+
+docker container exec -it manager docker stack deploy -c /stack/ch03-ingress.yml ingress
+
+docker container exec -it manager docker service ls
+```

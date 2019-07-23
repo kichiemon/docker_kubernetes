@@ -21,7 +21,7 @@ services:
       - 3375
     command: "--insecure-registry registry:5000"
     volumes:
-      - "./stack/stack"
+      - "./stack:/stack"
 
   worker01:
     container_name: worker01
