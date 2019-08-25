@@ -1,0 +1,11 @@
+apiversion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pvc-example
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: ssd
+  resources:
+    requests:
+      storage: 4Gi
