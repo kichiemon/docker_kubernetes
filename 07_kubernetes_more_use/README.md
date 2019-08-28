@@ -172,10 +172,288 @@ Switched to context "gihyo-k8s-gihyo-user".
 - これ自体がリソース
 - Bot入りのPod作成などに使える
 
+// create service account
+[service-account.yml](try/serviceaccount/service-account.yml)
+
+```
+$ kubectl apply -f service-account.yml
+serviceaccount/gihyo-pod-reader created
+```
+
+// ClusterRoleBindingを作成し、ServiceAccountに紐付ける
+[cluster-role-binding.yml](try/serviceaccount/cluster-role-binding.yml)
+
+```
+$ kubectl apply -f cluster-role-binding.yml
+clusterrolebinding.rbac.authorization.k8s.io/pod-reader-binding created
+```
+
+// podの一覧を取得するPodを作成。
+[get-pod-list.yml](try/serviceaccount/get-pod-list.yml)
+
+```
+$ kubectl apply -f get-pod-list.yml
+pod/gihyo-pod-reader created
+
+# → Podの一覧を取得できていることを確認
+$ kubectl -n kube-system logs -f gihyo-pod-reader
+check pod...
+NAMESPACE       NAME                                      READY     STATUS              RESTARTS   AGE
+docker          compose-6c67d745f6-tkwwh                  1/1       Running             3          14d
+docker          compose-api-57ff65b8c7-8swlh              1/1       Running             3          14d
+ingress-nginx   nginx-ingress-controller-8544567f-bw877   1/1       Running             1          3d
+kube-system     coredns-fb8b8dccf-59974                   1/1       Running             4          14d
+kube-system     coredns-fb8b8dccf-kktjv                   1/1       Running             4          14d
+kube-system     etcd-docker-desktop                       1/1       Running             3          14d
+kube-system     gihyo-pod-reader                          0/1       ContainerCreating   0          2s
+kube-system     kube-apiserver-docker-desktop             1/1       Running             3          14d
+kube-system     kube-controller-manager-docker-desktop    1/1       Running             4          14d
+kube-system     kube-proxy-dxvd6                          1/1       Running             3          14d
+kube-system     kube-scheduler-docker-desktop             1/1       Running             3          14d
+kube-system     kubernetes-dashboard-5f7b999d65-v5wps     1/1       Running             3          13d
+```
+
+// Podの取得以外をできないことを確認（権限の制御）
+
+e.g. Deploymentを取得するPodを作り、できないことを確認する
+
+[get-deployment-list.yml](try/serviceaccount/get-deployment-list.yml)
+```
+$ kubectl apply -f get-deployment-list.yml
+Error from server (Forbidden): error when creating "get-deployment-list.yml": pods "gihyo-deployment-reader" is forbidden: error looking up service account kube-system/gihyo-deployment-reader: serviceaccount "gihyo-deployment-reader" not found
+```
+
+## 7.3 Helm
+
+同じアプリケーションを複数の環境にデプロイするとき、環境変数の値が異なるDeploymentマニフェストを用意する必要が出てきたりする。
+このマニフェストファイル一式をクラスタ分用意するのは大変...
+
+→ Helmが助けになる
+
+- Helmは、Kubernetes chartsを管理するためのツール。
+  - Helmがパッケージ管理ツール
+  - Chartがリソースをまとめたパッケージ
+- Helmで Chartを管理することで、煩雑なマニフェスト管理をしやすくすることが主な目的
+- Chartを中心としたKubernetes開発の統合的な管理ツールとしても使える
+
+    
+*kubectlではなく、Helmでデプロイやアップデートを完結させる*
 
 
+// set up
+
+helm init を行うと、Tillerというアプリがkube-systemにデプロイされている
+- Tillerは、helmコマンドの指示を受け取る
+- インストールなどの処理を行う
+
+```
+kubectl config use-context docker-for-desktop
+Switched to context "docker-for-desktop".
+```
+
+```
+$ helm init
+$HELM_HOME has been configured at /Users/ikuya/.helm.
+
+Tiller (the Helm server-side component) has been installed into your Kubernetes Cluster.
+
+Please note: by default, Tiller is deployed with an insecure 'allow unauthenticated users' policy.
+To prevent this, run `helm init` with the --tiller-tls-verify flag.
+For more information on securing your installation see: https://docs.helm.sh/using_helm/#securing-your-helm-installation
+Happy Helming!
+```
+
+```
+$ kubectl -n kube-system get service,deployment,pod --selector app=helm
+NAME                    TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)     AGE
+service/tiller-deploy   ClusterIP   10.108.57.229   <none>        44134/TCP   28s
+
+NAME                                  READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.extensions/tiller-deploy   1/1     1            1           28s
+
+NAME                                READY   STATUS    RESTARTS   AGE
+pod/tiller-deploy-c48485567-7v8zk   1/1     Running   0          28s
+```
+
+// versionは揃えるべし
+```
+$ helm version
+Client: &version.Version{SemVer:"v2.13.1", GitCommit:"618447cbf203d147601b4b9bd7f8c37a5d39fbb4", GitTreeState:"clean"}
+Server: &version.Version{SemVer:"v2.13.1", GitCommit:"618447cbf203d147601b4b9bd7f8c37a5d39fbb4", GitTreeState:"clean"}
+```
+
+// upgrade
+```
+$ helm init --upgrade
+
+$HELM_HOME has been configured at /Users/ikuya/.helm.
+
+Tiller (the Helm server-side component) has been upgraded to the current version.
+Happy Helming!
+```
+
+#### Helm概念
+- クライアントとサーバで構成される
+    - クライアント == cli。命令を行う
+    - サーバー == KubernetesにインストールされるTiller。Kubernetesに対して処理を行う
+- Chart
+    - マニフェストを構築するためのテンプレートをまとめたもの
+    - Hlemのリポジトリにtgzとして格納される
+- リポジトリ
+    - lcoal: ローカで作成されたパッケージ
+    - stable: 安定した品質を持ったChatが配置される。デフォルトで利用可能
+    - incubator: stableの要件を満たしていないもの
+    - `$ helm search` でリポジトリを検索
+    - helm/chartsというGitHubリポジトリを参照すると、リポジトリを確認できる
+
+// incubatorを追加したい時
+```
+$ helm repo add incubator http:s//repo.url
+```
+
+#### Chartの構成
+- `values.yaml` デフォルトvalueファイル
+    - 変更したい場合、カスタムvalueファイルを作成する
+-
+
+e.g. Redmineのstable/redmine
+
+// install
+```
+$ helm install -f redmine.yml --name redmine stable/redmine --version 4.0.0
+NAME:   redmine
+LAST DEPLOYED: Wed Aug 28 23:44:22 2019
+NAMESPACE: kube-system
+STATUS: DEPLOYED
+.....
+
+```
+
+// installを確認。redmineがある
+```
+$ helm ls
+NAME   	REVISION	UPDATED                 	STATUS  	CHART        	APP VERSION	NAMESPACE
+redmine	1       	Wed Aug 28 23:44:22 2019	DEPLOYED	redmine-4.0.0	3.4.6      	kube-system
+```
+
+// [redmine.yml](helm/redmine.yml) の上書き設定により、 NodePortにデプロイされている
+// http://localhost:32213/を開くと、画面を確認できる
+```
+$ kubectl get service,deployment --selector release=redmine
+NAME                      TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)        AGE
+service/redmine-mariadb   ClusterIP   10.103.252.52   <none>        3306/TCP       99s
+service/redmine-redmine   NodePort    10.99.122.142   <none>        80:32213/TCP   99s
+
+NAME                                    READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.extensions/redmine-redmine   0/1     1            0           99s
+```
 
 
+// releaseを更新する
+```
+$ helm upgrade -f redmine.yml redmine stable/redmine --version 4.0.0
+Release "redmine" has been upgraded. Happy Helming!
+....
+```
+
+// Chartでアプリをアンインストールする
+
+```
+$ helm delete redmine
+release "redmine" deleted
+```
+
+// revisionを確認してロールバックも可能
+```
+$ helm ls --all
+NAME   	REVISION	UPDATED                 	STATUS 	CHART        	APP VERSION	NAMESPACE
+redmine	3       	Wed Aug 28 23:48:18 2019	DELETED	redmine-4.0.0	3.4.6      	kube-system
+
+$ helm rollback redmine 3
+Rollback was a success! Happy Helming!
+```
+
+// 完全に削除
+```
+$ helm del --purge redmine
+release "redmine" deleted
+```
+
+
+// RBACを有効にする
+
+```
+# create service account
+$ kubectl create serviceaccount tiller --namespace kube-system
+serviceaccount/tiller created
+
+$ kubectl create clusterrolebinding tiller-cluster-rule \
+  --clusterrole=cluster-admin --serviceaccount=kube-system:tiller
+clusterrolebinding.rbac.authorization.k8s.io/tiller-cluster-rule created
+
+$ kubectl patch deploy --namespace kube-system tiller-deploy \
+  -p '{"spec":{"template":{"spec":{"serviceaccount":"tiller"}}}}'
+deployment.extensions/tiller-deploy patched (no change)
+```
+
+// RBACに対応しているJenkinsを試す
+
+- [jenkins.yml](helm/jenkins.yml)
+```
+$ helm install -f jenkins.yml --name jenkins stable/jenkins
+NAME:   jenkins
+LAST DEPLOYED: Wed Aug 28 23:53:39 2019
+NAMESPACE: kube-system
+STATUS: DEPLOYED
+```
+
+```
+$ kubectl describe sa,clusterrolebinding -l app=jenkins
+Name:                jenkins
+Namespace:           kube-system
+......
+```
+
+####  独自のChartを作成する
+
+// Helmのローカルリポジトリ
+
+```
+$ helm repo list
+NAME  	URL
+stable	https://kubernetes-charts.storage.googleapis.com
+local 	http://127.0.0.1:8879/charts
+
+$ helm serve &
+Regenerating index. This may take a moment.
+Now serving you on 127.0.0.1:8879
+```
+
+
+// ひな形作成
+
+```
+$ helm create echo
+Creating echo
+```
+
+// ディレクトリ構成
+```
+$ tree .
+.
+└── echo
+    ├── Chart.yaml
+    ├── charts
+    ├── templates
+    │   ├── NOTES.txt
+    │   ├── _helpers.tpl
+    │   ├── deployment.yaml
+    │   ├── ingress.yaml
+    │   ├── service.yaml
+    │   └── tests
+    │       └── test-connection.yaml
+    └── values.yaml
+```
 
 
 
