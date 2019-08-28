@@ -3,18 +3,28 @@
 # Declare variables to be passed into your templates.
 
 replicaCount: 1
+nginx:
+  image:
+    repository: gihyodocker/nginx
+    tag: latest
+    pullPolicy: Always
+  healthChecl: /
+  backendHost: localhost:8080
 
-image:
-  repository: nginx
-  tag: stable
-  pullPolicy: IfNotPresent
+echo:
+  image:
+    repository: gihyodocker/echo
+    tag: latest
+    pullPolicy: Always
+  httpPort: 8080
 
 nameOverride: ""
 fullnameOverride: ""
 
 service:
+  name: nginx
   type: ClusterIP
-  port: 80
+  externalPort: 80
 
 ingress:
   enabled: false

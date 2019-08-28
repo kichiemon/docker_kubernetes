@@ -1,40 +1,50 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "echo.fullname" . }}
+  name: {{ template "echo.fullname" . }}
   labels:
-    app.kubernetes.io/name: {{ include "echo.name" . }}
-    helm.sh/chart: {{ include "echo.chart" . }}
-    app.kubernetes.io/instance: {{ .Release.Name }}
-    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    app: {{ template "echo.name" . }}
+    chart: {{ template "echo.chart" . }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
 spec:
   replicas: {{ .Values.replicaCount }}
   selector:
     matchLabels:
-      app.kubernetes.io/name: {{ include "echo.name" . }}
-      app.kubernetes.io/instance: {{ .Release.Name }}
+      app: {{ template "echo.name" . }}
+      release: {{ .Release.Name }}
   template:
     metadata:
       labels:
-        app.kubernetes.io/name: {{ include "echo.name" . }}
-        app.kubernetes.io/instance: {{ .Release.Name }}
+        app: {{ template "echo.name" . }}
+        release: {{ .Release.Name }}
     spec:
       containers:
-        - name: {{ .Chart.Name }}
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
-          imagePullPolicy: {{ .Values.image.pullPolicy }}
+        - name: nginx
+          image: "{{ .Values.nginx.image.repository }}:{{ .Values.nginx.image.tag }}"
+          imagePullPolicy: {{ .Values.nginx.image.pullPolicy }}
           ports:
             - name: http
               containerPort: 80
-              protocol: TCP
           livenessProbe:
             httpGet:
-              path: /
-              port: http
+              path: {{ .Values.nginx.healthCheck }}
+              port: 80
           readinessProbe:
             httpGet:
-              path: /
-              port: http
+              path: {{ .Values.nginx.healthCheck }}
+              port: 80
+          env:
+            - name: BACKEND_HOST
+              value: {{ .Values.nginx.backendHost | quote }}
+        - name: echo
+          image: "{{ .Values.echo.image.repository }}:{{ .Values.echo.image.tag }}"
+          imagePullPolicy: {{ .Values.echo.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.echo.httpPort }}
+          env:
+            - name: HTTP_PORT
+              value: {{ .Values.echo.httpPort | quote }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
       {{- with .Values.nodeSelector }}

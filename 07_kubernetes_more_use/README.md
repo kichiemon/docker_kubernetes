@@ -455,5 +455,42 @@ $ tree .
     └── values.yaml
 ```
 
+// 流れ：作りたいDeploymentマニフェストを考える　→　必要なChart設定を行う
 
+開発者が修正するのは、deployment.yamlの `spec.template.spec` の部分。
 
+- Deployment : [deployment.yaml](helm/original/echo/templates/deployment.yaml)
+- Service : [service.yaml](helm/original/echo/templates/service.yaml)
+- Ingress: [ingress.yaml](helm/original/echo/templates/ingress.yaml)
+
+// packageする
+```
+$ helm package echo
+Successfully packaged chart and saved it to: /Users/ikuya/repository/github.com/kichiemon/docker_kubernetes/07_kubernetes_more_use/helm/original/echo-0.1.0.tgz
+```
+
+```
+$ helm search echo
+NAME      	CHART VERSION	APP VERSION	DESCRIPTION
+local/echo	0.1.0        	1.0        	A Helm chart for Kubernetes
+```
+
+```
+$ helm install -f echo.yml --name echo local/echo
+NAME:   echo
+LAST DEPLOYED: Thu Aug 29 00:25:23 2019
+NAMESPACE: kube-system
+STATUS: DEPLOYED
+```
+
+```
+$ kubectl get deployment,service,ingress --selector app=echo
+NAME                         READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.extensions/echo   1/1     1            1           31s
+
+NAME           TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)   AGE
+service/echo   ClusterIP   10.101.162.87   <none>        80/TCP    31s
+
+NAME                      HOSTS                   ADDRESS   PORTS   AGE
+ingress.extensions/echo   ch06-echo.gihyo.local             80      31s
+```

@@ -3,17 +3,17 @@ kind: Service
 metadata:
   name: {{ include "echo.fullname" . }}
   labels:
-    app.kubernetes.io/name: {{ include "echo.name" . }}
-    helm.sh/chart: {{ include "echo.chart" . }}
-    app.kubernetes.io/instance: {{ .Release.Name }}
-    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    app: {{ template "echo.name" . }}
+    chart: {{ template "echo.chart" . }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
 spec:
   type: {{ .Values.service.type }}
   ports:
-    - port: {{ .Values.service.port }}
+    - port: {{ .Values.service.externalPort }}
       targetPort: http
       protocol: TCP
-      name: http
+      name: {{ .Values.service.name }}
   selector:
-    app.kubernetes.io/name: {{ include "echo.name" . }}
-    app.kubernetes.io/instance: {{ .Release.Name }}
+    app: {{ template "echo.name" . }}
+    release: {{ .Release.Name }}
