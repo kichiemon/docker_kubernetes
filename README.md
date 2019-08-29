@@ -6,6 +6,7 @@
 - [Kubernetesの全体像はこちら](05_kubernetes_entry/README.md)
 - [Kubernetesの発展的な利用](07_kubernetes_more_use/README.md)
 - [Helmについて](07_kubernetes_more_use/HELM.md)
+- [Deployについて](07_kubernetes_more_use/Deploy.md)
 
 
 ## 作成したChartリポジトリ

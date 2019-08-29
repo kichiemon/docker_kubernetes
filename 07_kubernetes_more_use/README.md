@@ -223,3 +223,6 @@ $ kubectl apply -f get-deployment-list.yml
 Error from server (Forbidden): error when creating "get-deployment-list.yml": pods "gihyo-deployment-reader" is forbidden: error looking up service account kube-system/gihyo-deployment-reader: serviceaccount "gihyo-deployment-reader" not found
 ```
 
+## Helmは [こちら](./HELM.md)
+
+## デプロイ戦略は [こちら](./Deploy.md)
