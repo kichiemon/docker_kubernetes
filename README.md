@@ -7,7 +7,7 @@
 - [Kubernetesの発展的な利用](07_kubernetes_more_use/README.md)
 - [Helmについて](07_kubernetes_more_use/HELM.md)
 - [Deployについて](07_kubernetes_more_use/Deploy.md)
-- [コンテナの運用](./08_operation_container/README.md)
+- [コンテナの運用、HPA、障害防止など](./08_operation_container/README.md)
 - [Kubernetesにおけるログ管理](./08_operation_container/Kubernetes_log.md)
 
 ## 作成したChartリポジトリ
